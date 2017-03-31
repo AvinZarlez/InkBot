@@ -4,6 +4,8 @@
 var restify = require('restify');
 var builder = require('botbuilder');
 
+var Story = require('inkjs').Story;
+
 //Set up Restify Server 
 var server = restify.createServer();
 server.listen(process.env.port || process.env.PORT || 3978, function () {
@@ -25,7 +27,8 @@ var connector = new builder.ChatConnector({
 var bot = new builder.UniversalBot(connector);
 server.post('/api/messages', connector.listen())
 
-
+var json = require('./story.json');
+var inkStory = new Story(json);
 
 bot.dialog('/', [
     function (session) {
@@ -33,7 +36,7 @@ bot.dialog('/', [
     },
     function (session, results) {
         if (results.response) {
-            session.send("I think so too!");
+            session.send(inkStory.ContinueMaximally());
         }
         else
         {

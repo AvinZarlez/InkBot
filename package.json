@@ -5,6 +5,7 @@
   "main": "app.js",
   "dependencies": {
     "botbuilder": "^3.7.0",
+    "inkjs": "^1.5.1",
     "restify": "^4.3.0"
   },
   "scripts": {
