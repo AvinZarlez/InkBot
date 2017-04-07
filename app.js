@@ -27,21 +27,80 @@ var connector = new builder.ChatConnector({
 var bot = new builder.UniversalBot(connector);
 server.post('/api/messages', connector.listen())
 
-var json = require('./story.json');
-var inkStory = new Story(json);
-
 bot.dialog('/', [
     function (session) {
-        builder.Prompts.confirm(session, "Do you think the bot is working?");
+        session.dialogData.save = null;
+        builder.Prompts.confirm(session, "Would you like to play a game?");
     },
     function (session, results) {
         if (results.response) {
-            session.send(inkStory.ContinueMaximally());
+            session.replaceDialog('/loop')
         }
-        else
-        {
-            session.send(":( Oh no!");
+        else {
+            session.send("No? Oh well! Ask again later.");
         }
-        session.endDialog();
+    }
+]);
+
+var json = require('./story.json');
+var inkStory = new Story(json);
+
+bot.dialog('/loop', [
+    function (session) {
+
+        if (session.dialogData.save != null) {
+            inkStory.state.LoadJson(session.dialogData.save);
+        }
+        else {
+            session.send("NEW GAME");
+        }
+
+        var str = inkStory.ContinueMaximally();
+
+        while (inkStory.currentChoices.length == 1) {
+            str += "\n\n...\n\n" + inkStory.currentChoices[0].text;
+            inkStory.ChooseChoiceIndex(0);
+            inkStory.ContinueMaximally();
+        }
+
+        if (inkStory.currentChoices.length > 0) {
+
+            var choices = {};
+            for (var i = 0; i < inkStory.currentChoices.length; ++i) {
+                choices[inkStory.currentChoices[i].text] = i;
+            }
+
+            session.dialogData.save = inkStory.state.toJson();
+
+            builder.Prompts.choice(session, str, choices);
+        }
+        else {
+            session.send(str);
+            session.send("GAME OVER");
+
+            session.dialogData.save = null;
+
+            session.endDialog();
+        }
+    },
+    function (session, results, choices) {
+
+        if (session.dialogData.save != null) {
+            inkStory.state.LoadJson(session.dialogData.save);
+
+            if (results.response) {
+                inkStory.ChooseChoiceIndex(results.response.index);
+                session.dialogData.save = inkStory.state.toJson();
+
+                session.beginDialog('/loop')
+            }
+            else {
+                session.send("ERROR :( I didn't get a response!");
+            }
+        }
+        else {
+            session.send("ERROR loading json!");
+        }
+
     }
 ]);
