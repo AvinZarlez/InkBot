@@ -34,7 +34,7 @@ bot.dialog('/', [
     },
     function (session, results) {
         if (results.response) {
-            session.replaceDialog('/loop')
+            session.replaceDialog('/loop', session.dialogData.save)
         }
         else {
             session.send("No? Oh well! Ask again later.");
@@ -46,7 +46,8 @@ var json = require('./story.json');
 var inkStory = new Story(json);
 
 bot.dialog('/loop', [
-    function (session) {
+    function (session, args) {
+        session.dialogData.save = args || null;
 
         if (session.dialogData.save != null) {
             inkStory.state.LoadJson(session.dialogData.save);
@@ -71,6 +72,8 @@ bot.dialog('/loop', [
             }
 
             session.dialogData.save = inkStory.state.toJson();
+            
+            //session.send("Save Data: "+session.dialogData.save);
 
             builder.Prompts.choice(session, str, choices);
         }
@@ -92,7 +95,7 @@ bot.dialog('/loop', [
                 inkStory.ChooseChoiceIndex(results.response.index);
                 session.dialogData.save = inkStory.state.toJson();
 
-                session.beginDialog('/loop')
+                session.beginDialog('/loop', session.dialogData.save)
             }
             else {
                 session.send("ERROR :( I didn't get a response!");
