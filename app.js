@@ -54,14 +54,15 @@ bot.dialog('/loop', [
         }
         else {
             session.send("NEW GAME");
+            inkStory.ResetState();
         }
 
         var str = inkStory.ContinueMaximally();
 
         while (inkStory.currentChoices.length == 1) {
-            str += "\n\n...\n\n" + inkStory.currentChoices[0].text;
+            str += "\n\n...\n\n" + inkStory.currentChoices[0].text +"\n\n...\n\n";
             inkStory.ChooseChoiceIndex(0);
-            inkStory.ContinueMaximally();
+            str += inkStory.ContinueMaximally();
         }
 
         if (inkStory.currentChoices.length > 0) {
@@ -95,7 +96,7 @@ bot.dialog('/loop', [
                 inkStory.ChooseChoiceIndex(results.response.index);
                 session.dialogData.save = inkStory.state.toJson();
 
-                session.beginDialog('/loop', session.dialogData.save)
+                session.replaceDialog('/loop', session.dialogData.save)
             }
             else {
                 session.send("ERROR :( I didn't get a response!");
