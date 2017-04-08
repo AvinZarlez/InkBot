@@ -30,14 +30,14 @@ server.post('/api/messages', connector.listen())
 bot.dialog('/', [
     function (session) {
         session.dialogData.save = null;
-        builder.Prompts.confirm(session, "Would you like to play a game?");
+        builder.Prompts.confirm(session, "Hello! Would you let to play a story?");
     },
     function (session, results) {
         if (results.response) {
             session.replaceDialog('/loop', session.dialogData.save)
         }
         else {
-            session.send("No? Oh well! Ask again later.");
+            session.send("No? Oh well! That's all I do. If you change your mind, ask again later.");
         }
     }
 ]);
