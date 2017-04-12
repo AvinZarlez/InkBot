@@ -30,7 +30,7 @@ server.post('/api/messages', connector.listen())
 bot.dialog('/', [
     function (session) {
         session.dialogData.save = null;
-        builder.Prompts.confirm(session, "Hello! Would you let to play a story?");
+        builder.Prompts.confirm(session, "Hello! Would you like to play a story?");
     },
     function (session, results) {
         if (results.response) {
