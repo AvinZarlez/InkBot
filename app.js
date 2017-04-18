@@ -67,57 +67,62 @@ bot.dialog('/loop', [
 
         // write the story one line at a time to the string until we find a choice
         var str = "";
+        var custom = false;
         var continueStory = false;
         do {
-            //Write the whole story until we find a choice //Disabled to check for custom dialogs.
-            //var str = inkStory.ContinueMaximally();
+            //Write the whole story until we find a choice 
+            //var str = inkStory.ContinueMaximally(); //Disabled to check for custom dialogs.
+
             while (inkStory.canContinue) {
                 str += "\n" + inkStory.Continue();
 
-                var custom = false;
+                custom = false;
                 inkStory.currentTags.forEach(function (element) {
                     if (element == "customDialog:custom") {
                         custom = true;
                     }
                 }, this);
                 if (custom) {
-                    session.dialogData.save = inkStory.state.toJson();
-                    session.beginDialog('/custom', session.dialogData.save)
+
+                    session.send(str);
+                    //session.dialogData.save = inkStory.state.toJson(); //Unneeded line?
+                    session.replaceDialog('/custom', inkStory.state.toJson())
+                    break;
                 }
             }
-            if (inkStory.currentChoices.length == 1) {
+            if (!custom && inkStory.currentChoices.length == 1) {
                 str += "\n\n...\n\n" + inkStory.currentChoices[0].text + "\n\n...\n\n";
                 inkStory.ChooseChoiceIndex(0);
                 continueStory = true;
             }
-            else
-            {
+            else {
                 continueStory = false;
             }
         }
         while (continueStory);
 
+        if (!custom) {
+            if (inkStory.currentChoices.length > 0) {
 
-        if (inkStory.currentChoices.length > 0) {
+                var choices = {};
+                for (var i = 0; i < inkStory.currentChoices.length; ++i) {
+                    choices[inkStory.currentChoices[i].text] = i;
+                }
 
-            var choices = {};
-            for (var i = 0; i < inkStory.currentChoices.length; ++i) {
-                choices[inkStory.currentChoices[i].text] = i;
+                session.dialogData.save = inkStory.state.toJson();
+
+                //session.send("Save Data: "+session.dialogData.save);
+
+                builder.Prompts.choice(session, str, choices);
             }
+            else {
+                session.send(str);
+                session.send("GAME OVER");
 
-            session.dialogData.save = inkStory.state.toJson();
+                session.dialogData.save = null;
 
-            //session.send("Save Data: "+session.dialogData.save);
-
-            builder.Prompts.choice(session, str, choices);
-        }
-        else {
-            session.send(str);
-            session.send("GAME OVER");
-
-            session.dialogData.save = null;
-
-            session.endDialog();
+                session.endDialog();
+            }
         }
     },
     function (session, results) {
@@ -144,8 +149,8 @@ bot.dialog('/loop', [
 
 
 bot.dialog('/custom', [
-    function (session) {
-        session.dialogData.save = null;
+    function (session, save) {
+        session.dialogData.save = save;
         builder.Prompts.confirm(session, "Welcome to the custom dialog! Did you make it ok?");
     },
     function (session, results) {
@@ -155,5 +160,6 @@ bot.dialog('/custom', [
         else {
             session.send("Oops! Let's continue anyway.");
         }
+        session.replaceDialog('/loop', session.dialogData.save)
     }
 ]);
