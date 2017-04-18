@@ -77,16 +77,17 @@ bot.dialog('/loop', [
                 str += "\n" + inkStory.Continue();
 
                 custom = false;
+                var customDialogDest = "loop";
                 inkStory.currentTags.forEach(function (element) {
-                    if (element == "customDialog:custom") {
+                    if (element.startsWith("customDialog:")) {
                         custom = true;
+                        customDialogDest = element.substring(element.indexOf(":") + 1);
                     }
                 }, this);
                 if (custom) {
-
                     session.send(str);
                     //session.dialogData.save = inkStory.state.toJson(); //Unneeded line?
-                    session.replaceDialog('/custom', inkStory.state.toJson())
+                    session.replaceDialog('/'+customDialogDest, inkStory.state.toJson())
                     break;
                 }
             }
