@@ -57,37 +57,76 @@ bot.dialog('/loop', [
             inkStory.ResetState();
         }
 
-        var str = inkStory.ContinueMaximally();
-
-        while (inkStory.currentChoices.length == 1) {
-            str += "\n\n...\n\n" + inkStory.currentChoices[0].text +"\n\n...\n\n";
-            inkStory.ChooseChoiceIndex(0);
-            str += inkStory.ContinueMaximally();
-        }
-
-        if (inkStory.currentChoices.length > 0) {
-
-            var choices = {};
-            for (var i = 0; i < inkStory.currentChoices.length; ++i) {
-                choices[inkStory.currentChoices[i].text] = i;
-            }
-
-            session.dialogData.save = inkStory.state.toJson();
-            
-            //session.send("Save Data: "+session.dialogData.save);
-
-            builder.Prompts.choice(session, str, choices);
-        }
-        else {
-            session.send(str);
+        if (!inkStory.canContinue && inkStory.currentChoices.length === 0) {
             session.send("GAME OVER");
 
             session.dialogData.save = null;
 
             session.endDialog();
         }
+
+        // write the story one line at a time to the string until we find a choice
+        var str = "";
+        var custom = false;
+        var continueStory = false;
+        do {
+            //Write the whole story until we find a choice 
+            //var str = inkStory.ContinueMaximally(); //Disabled to check for custom dialogs.
+
+            while (inkStory.canContinue) {
+                str += "\n" + inkStory.Continue();
+
+                custom = false;
+                var customDialogDest = "loop";
+                inkStory.currentTags.forEach(function (element) {
+                    if (element.startsWith("customDialog:")) {
+                        custom = true;
+                        customDialogDest = element.substring(element.indexOf(":") + 1);
+                    }
+                }, this);
+                if (custom) {
+                    session.send(str);
+                    //session.dialogData.save = inkStory.state.toJson(); //Unneeded line?
+                    session.replaceDialog('/'+customDialogDest, inkStory.state.toJson())
+                    break;
+                }
+            }
+            if (!custom && inkStory.currentChoices.length == 1) {
+                str += "\n\n...\n\n" + inkStory.currentChoices[0].text + "\n\n...\n\n";
+                inkStory.ChooseChoiceIndex(0);
+                continueStory = true;
+            }
+            else {
+                continueStory = false;
+            }
+        }
+        while (continueStory);
+
+        if (!custom) {
+            if (inkStory.currentChoices.length > 0) {
+
+                var choices = {};
+                for (var i = 0; i < inkStory.currentChoices.length; ++i) {
+                    choices[inkStory.currentChoices[i].text] = i;
+                }
+
+                session.dialogData.save = inkStory.state.toJson();
+
+                //session.send("Save Data: "+session.dialogData.save);
+
+                builder.Prompts.choice(session, str, choices);
+            }
+            else {
+                session.send(str);
+                session.send("GAME OVER");
+
+                session.dialogData.save = null;
+
+                session.endDialog();
+            }
+        }
     },
-    function (session, results, choices) {
+    function (session, results) {
 
         if (session.dialogData.save != null) {
             inkStory.state.LoadJson(session.dialogData.save);
@@ -106,5 +145,22 @@ bot.dialog('/loop', [
             session.send("ERROR loading json!");
         }
 
+    }
+]);
+
+
+bot.dialog('/custom', [
+    function (session, save) {
+        session.dialogData.save = save;
+        builder.Prompts.confirm(session, "Welcome to the custom dialog! Did you make it ok?");
+    },
+    function (session, results) {
+        if (results.response) {
+            session.send("Good! Let's continue then.");
+        }
+        else {
+            session.send("Oops! Let's continue anyway.");
+        }
+        session.replaceDialog('/loop', session.dialogData.save)
     }
 ]);
